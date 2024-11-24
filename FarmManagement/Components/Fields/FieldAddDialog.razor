@@ -1,0 +1,58 @@
+﻿@inject HttpClient _http
+@inject IDialogService DialogService
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.h6">Add New Field</MudText>
+        <MudTextField @bind-Value="newField.FieldName" Placeholder="Field Name" Immediate="true" Validation="CheckUniqueFieldName" Error="@isFieldNameDuplicate" ErrorText="Field Name must be unique."  />
+        <MudTextField Label="Field Area"
+                      @bind-Value="newField.FieldArea"
+                      Validation="ValidateFieldArea"
+                      Immediate="true"
+                      Adornment="Adornment.End"
+                      AdornmentText="m²" />
+        <MudTextField Label="Crop Name" @bind-Value="newField.CropName" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="SaveField" Color="Color.Primary" Disabled="@isFieldNameDuplicate">Save</MudButton>
+        <MudButton OnClick="CloseDialog" Color="Color.Secondary">Cancel</MudButton>
+
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private MudDialogInstance MudDialog { get; set; }
+
+    private FieldsVm newField = new FieldsVm();
+
+    private bool isFieldNameDuplicate = false;
+
+    private async Task<string> CheckUniqueFieldName(string fieldName)
+    {
+        if (string.IsNullOrWhiteSpace(fieldName))
+        {
+            return null; // Allow empty fields (use Required if needed)
+        }
+
+        var isUnique = await _http.GetFromJsonAsync<bool>($"api/Fields/IsFieldNameUnique?fieldName={fieldName}");
+        return isUnique ? null : "Field Name must be unique.";
+    }
+    private string ValidateFieldArea(double? fieldArea)
+    {
+        return (fieldArea < 0) ? "Field Area must be a positive number." : null;
+    }
+    private void SaveField()
+    {
+
+        if (isFieldNameDuplicate)
+        {
+            return; // Prevent submission if duplicate
+        }
+
+        // Perform any logic to save the field data
+        MudDialog.Close(DialogResult.Ok(newField));
+
+    }
+
+    private void CloseDialog() => MudDialog.Cancel();
+}

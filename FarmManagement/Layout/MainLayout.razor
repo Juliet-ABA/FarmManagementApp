@@ -1,0 +1,20 @@
+﻿@inherits LayoutComponentBase
+
+@* Required *@
+<MudThemeProvider />
+<MudPopoverProvider />
+
+@* Needed for dialogs *@
+<MudDialogProvider />
+
+@* Needed for snackbars *@
+<MudSnackbarProvider />
+
+<MudLayout>
+    <MudAppBar Color="Color.Primary">
+        Farm Management
+        </MudAppBar>
+        <MudMainContent>
+            @Body
+        </MudMainContent>
+</MudLayout>

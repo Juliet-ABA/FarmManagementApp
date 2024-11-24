@@ -1,0 +1,28 @@
+﻿@inject HttpClient _http
+<MudDialog>
+    <DialogContent>
+        Are you sure to delete this item?
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="ConfirmDeleteAsync">Confirm Delete</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private MudDialogInstance MudDialog { get; set; }
+
+    [Parameter]
+    public string id { get; set; } 
+    [Parameter]
+    public string FieldName { get; set; }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task ConfirmDeleteAsync()
+    {
+        await _http.DeleteAsync($"/api/Fields/{id}/{FieldName}");
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+}

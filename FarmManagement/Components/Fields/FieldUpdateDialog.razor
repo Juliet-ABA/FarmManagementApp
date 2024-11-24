@@ -1,0 +1,39 @@
+﻿@inject HttpClient _http
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.h6">Update Field</MudText>
+        <MudTextField Label="Field Name" @bind-Value="editfieldsVm.FieldName" />
+        <MudTextField Label="Field Area" @bind-Value="editfieldsVm.FieldArea" />
+        <MudTextField Label="Crop Name" @bind-Value="editfieldsVm.CropName" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="UpdateField" Color="Color.Primary">Update</MudButton>
+        <MudButton OnClick="Cancel" Color="Color.Secondary">Cancel</MudButton>
+
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private MudDialogInstance MudDialog { get; set; }
+
+    [Parameter]
+    public string id { get; set; }
+    [Parameter]
+    public string FieldName { get; set; }
+
+    FieldsVm editfieldsVm = new FieldsVm();
+
+    protected override async Task OnInitializedAsync()
+    {
+        editfieldsVm = await _http.GetFromJsonAsync<FieldsVm>($"/api/Fields/{id}/{FieldName}");
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+
+    private void UpdateField()
+    {
+        MudDialog.Close(DialogResult.Ok(editfieldsVm));
+    }
+}

@@ -1,0 +1,122 @@
+﻿@page "/"
+@inject HttpClient _http
+@inject IDialogService DialogService
+
+<MudStack>
+    <MudText Typo="Typo.h6">Fields List</MudText>
+    <MudStack Direction="Row" Spacing="2">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="() => OpenAddFieldDialog()">Add Field</MudButton>
+    </MudStack>
+</MudStack>
+
+<MudTable Items="fieldList" Filter="new Func<FieldsVm,bool>(FilterFunc1)" Bordered Striped Hover>
+    <ToolBarContent>
+        <MudSpacer />
+        <MudTextField @bind-Value="searchQuery" Placeholder="Search Field Name or Crop Name" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+    </ToolBarContent>
+    <HeaderContent>
+        <MudTh><MudTableSortLabel SortBy="new Func<FieldsVm, object>(x=>x.FieldName)">Field Name</MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<FieldsVm, object>(x=>x.FieldArea)">Field Area</MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<FieldsVm, object>(x=>x.CropName)">Crop Name</MudTableSortLabel></MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Field Name">@context.FieldName</MudTd>
+        <MudTd DataLabel="Field Area">@context.FieldArea</MudTd>
+        <MudTd DataLabel="Crop Name">@context.CropName</MudTd>
+        <MudTd DataLabel="Edit Field">
+            <MudIcon Icon="@Icons.Material.Filled.Edit" Title="Edit" Color="Color.Primary" onclick="@(() => { OpenUpdateFieldDialog(context.Id,context.FieldName); })" />
+        </MudTd>
+        <MudTd DataLabel="Delete Field">
+            <MudIcon Icon="@Icons.Material.Filled.Delete" Title="Delete" Color="Color.Primary" onclick="@(() => { DeleteFieldAsync(context.Id,context.FieldName); })" />
+        </MudTd>
+    </RowTemplate>
+    <PagerContent>
+        <MudTablePager />
+    </PagerContent>
+</MudTable>
+
+@code {
+    private string searchQuery = string.Empty;
+    private List<FieldsVm> fieldList = new List<FieldsVm>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await GetFieldListAsync();
+    }
+
+    private async Task OnSearchChanged(string value)
+    {
+        searchQuery = value;
+        await GetFieldListAsync();
+    }
+
+    private async Task GetFieldListAsync()
+    {
+        var response = await _http.GetFromJsonAsync<List<FieldsVm>>("api/Fields");
+        fieldList = response ?? new List<FieldsVm>();
+    }
+
+    private async Task OpenAddFieldDialog()
+    {
+        var parameters = new DialogParameters();
+        var options = new DialogOptions() { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+
+        var dialog = DialogService.Show<FieldAddDialog>("Add Field", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            var newField = (FieldsVm)result.Data;
+            await _http.PostAsJsonAsync("api/Fields", newField); // Save to the backend
+            await GetFieldListAsync(); // Refresh the field list
+        }
+    }
+
+    private async Task OpenUpdateFieldDialog(string id, string fieldName)  
+    {
+        var parameters = new DialogParameters();
+        var options = new DialogOptions() { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        parameters.Add("id", id); 
+        parameters.Add("FieldName", fieldName);
+
+        var dialog = await DialogService.ShowAsync<FieldUpdateDialog>("Update Field", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            var updateField = (FieldsVm)result.Data;
+            await _http.PutAsJsonAsync("api/Fields", updateField); // Save to the backend
+            await GetFieldListAsync(); // Refresh the field list
+            StateHasChanged();
+        }
+    }
+
+    private async Task DeleteFieldAsync(string id, string fieldName)
+    {
+        var parameters = new DialogParameters();
+        var options = new DialogOptions() { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        parameters.Add("id", id);
+        parameters.Add("FieldName", fieldName);
+        var dialog = await DialogService.ShowAsync<FieldDeleteDialog>("Delete Confirmation", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            fieldList = fieldList.Where(x => x.Id != id).ToList();
+            StateHasChanged();
+        }
+    }
+
+    private bool FilterFunc1(FieldsVm element) => FilterFunc(element, searchQuery);
+
+    private bool FilterFunc(FieldsVm element, string searchString)
+    {
+        if (string.IsNullOrWhiteSpace(searchString))
+            return true;
+        if (element.FieldName.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (element.CropName.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+        return false;
+    }
+}
